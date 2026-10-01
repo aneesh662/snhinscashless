@@ -4,9 +4,10 @@ UPDATED VERSION
    - Uploaded admin logos are used when available.
    - Companies without an uploaded logo use a built-in generated SVG logo automatically.
 
-2. Admin Login is now visible on the public home page.
-   - Desktop: top-right Admin Login button.
-   - Mobile: Admin Login button remains visible.
+2. Admin Login is now highly visible on the public home page.
+   - Top-right header Admin Login button.
+   - A separate ADMIN LOGIN access bar directly below the header.
+   - On mobile, the access button becomes full-width.
 
 3. Admin dashboard also shows insurer logos in the Insurance Companies list.
 
