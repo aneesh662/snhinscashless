@@ -1,4 +1,26 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit Patient Request #{{item.id}}</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body>
 <header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-mark">SNH</div><div><h1>Edit Patient Request #{{item.id}}</h1><p>Santhi Nursing Home</p></div></div><div class="top-actions"><a href="{{url_for('admin_dashboard')}}" class="admin-link">Admin Dashboard</a><a href="{{url_for('admin_logout')}}" class="admin-link">Logout</a></div></div></header>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="flash {{c}}">{{m}}</div>{% endfor %}{% endwith %}
-<div class="admin-wrap"><section class="panel" style="max-width:760px;margin:0 auto"><h2>Patient & Request Details</h2><p style="color:#64748b">Update patient information and contact number. Uploaded documents are kept unchanged.</p><form method="post" class="stack"><label>Insurance Company<select name="insurance_id" required>{% for i in insurers %}<option value="{{i.id}}" {% if item.insurance_id==i.id %}selected{% endif %}>{{i.name}}</option>{% endfor %}</select></label><label>Patient Name<input name="patient_name" value="{{item.patient_name}}" required></label><label>Age<input name="age" type="number" min="0" max="130" value="{{item.age}}" required></label><label>Doctor Name<input name="doctor_name" value="{{item.doctor_name}}" required></label><label>Patient / Attendant Contact Number<input name="contact_number" type="tel" value="{{item.contact_number}}" required></label><label>Admin Note<textarea name="admin_note" rows="4">{{item.admin_note}}</textarea></label><div style="display:flex;gap:8px"><button class="btn btn-primary">Save Patient Details</button><a class="btn btn-light" href="{{url_for('admin_dashboard')}}">Cancel</a></div></form></section></div></body></html>
+<div class="admin-wrap"><section class="panel" style="max-width:760px;margin:0 auto"><h2>Patient & Request Details</h2><p style="color:#64748b">Update patient information and contact number. Uploaded documents are kept unchanged.</p><form method="post" class="stack"><label>Insurance Company<select name="insurance_id" required>{% for i in insurers %}<option value="{{i.id}}" {% if item.insurance_id==i.id %}selected{% endif %}>{{i.name}}</option>{% endfor %}</select></label><label>Patient Name<input name="patient_name" value="{{item.patient_name}}" required></label><label>Age<input name="age" type="number" min="0" max="130" value="{{item.age}}" required></label><label>Doctor Name<input name="doctor_name" value="{{item.doctor_name}}" required></label><label>Patient / Attendant Contact Number<input name="contact_number" type="tel" value="{{item.contact_number}}" required></label><label>Admin Note<textarea name="admin_note" rows="4">{{item.admin_note}}</textarea></label><div style="display:flex;gap:8px"><button class="btn btn-primary">Save Patient Details</button><a class="btn btn-light" href="{{url_for('admin_dashboard')}}">Cancel</a></div>
+<div class="form-grid">
+  <div class="form-group">
+    <label>Insurance Documents PDF</label>
+    <input type="file" name="insurance_document_pdf" accept="application/pdf">
+    <small>Optional: upload the insurance/pre-authorization document as a PDF.</small>
+  </div>
+  <div class="form-group">
+    <label>Additional Insurance PDF</label>
+    <input type="file" name="additional_insurance_pdf" accept="application/pdf">
+    <small>Optional: upload another insurance-related PDF.</small>
+  </div>
+</div>
+
+
+{% if request.insurance_document_pdf %}
+<p><strong>Existing Insurance PDF:</strong> <a href="{{ url_for('admin_view_pdf', req_id=request.id, kind='insurance') }}" target="_blank">View PDF</a></p>
+{% endif %}
+{% if request.additional_insurance_pdf %}
+<p><strong>Existing Additional PDF:</strong> <a href="{{ url_for('admin_view_pdf', req_id=request.id, kind='additional') }}" target="_blank">View PDF</a></p>
+{% endif %}
+
+</form></section></div></body></html>

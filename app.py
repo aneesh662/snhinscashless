@@ -309,7 +309,7 @@ def health():
 @admin_required
 def admin_delete_request(req_id):
     item = db.get_or_404(CashlessRequest, req_id)
-    for filename in [item.id_card, item.insurance_card_front, item.insurance_card_back]:
+    for filename in [item.id_card, item.insurance_card_front, item.insurance_card_back, item.insurance_document_pdf, item.additional_insurance_pdf]:
         if filename:
             path = os.path.join(DOC_DIR, filename)
             if os.path.isfile(path):
@@ -321,6 +321,19 @@ def admin_delete_request(req_id):
     db.session.commit()
     flash(f"Cashless request #{req_id} deleted.", "success")
     return redirect(url_for("admin_dashboard"))
+
+@app.get("/admin/request/<int:req_id>/pdf/<kind>")
+@admin_required
+def admin_view_pdf(req_id, kind):
+    item = db.get_or_404(CashlessRequest, req_id)
+    field_map = {
+        "insurance": item.insurance_document_pdf,
+        "additional": item.additional_insurance_pdf,
+    }
+    filename = field_map.get(kind)
+    if not filename:
+        abort(404)
+    return send_from_directory(DOC_DIR, filename, as_attachment=False)
 
 @app.get("/admin/request/<int:req_id>/document/<kind>")
 @admin_required
@@ -335,6 +348,17 @@ def admin_view_document(req_id, kind):
     if not filename:
         abort(404)
     return send_from_directory(DOC_DIR, filename, as_attachment=False)
+
+def migrate_database():
+    # Lightweight SQLite migration for newly added PDF columns.
+    inspector = db.session.execute(db.text("PRAGMA table_info(cashless_request)")).fetchall()
+    columns = {row[1] for row in inspector}
+    with db.engine.begin() as conn:
+        if "insurance_document_pdf" not in columns:
+            conn.execute(db.text("ALTER TABLE cashless_request ADD COLUMN insurance_document_pdf VARCHAR(255)"))
+        if "additional_insurance_pdf" not in columns:
+            conn.execute(db.text("ALTER TABLE cashless_request ADD COLUMN additional_insurance_pdf VARCHAR(255)"))
+
 
 def seed():
     db.create_all()
@@ -362,6 +386,8 @@ def seed():
     db.session.commit()
 
 with app.app_context():
+    db.create_all()
+    migrate_database()
     seed()
 
 

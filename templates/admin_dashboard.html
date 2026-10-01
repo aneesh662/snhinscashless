@@ -15,7 +15,20 @@
   <a class="btn btn-primary" href="{{url_for('edit_request',req_id=r.id)}}">✏ Edit</a>
   <button type="button" class="btn btn-green" onclick="shareRequest({{r.id}})">💬 WhatsApp</button>
   <form method="post" action="{{url_for('admin_delete_request',req_id=r.id)}}" onsubmit="return confirm('Delete request #{{r.id}} and all uploaded patient documents? This cannot be undone.');" style="display:inline">
-    <button class="btn btn-danger" type="submit">🗑 Delete</button>
+    
+<div class="form-grid">
+  <div class="form-group">
+    <label>Insurance Documents PDF</label>
+    <input type="file" name="insurance_document_pdf" accept="application/pdf">
+    <small>Upload a combined insurance/pre-authorization document as PDF.</small>
+  </div>
+  <div class="form-group">
+    <label>Additional Insurance PDF</label>
+    <input type="file" name="additional_insurance_pdf" accept="application/pdf">
+    <small>Optional additional insurance document.</small>
+  </div>
+</div>
+<button class="btn btn-danger" type="submit">🗑 Delete</button>
   </form>
 </div>
 </td><td><span class="badge">{{r.status}}</span>
