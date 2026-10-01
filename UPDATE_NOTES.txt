@@ -1,0 +1,19 @@
+UPDATED VERSION
+
+1. Insurance company cards now always show a logo image.
+   - Uploaded admin logos are used when available.
+   - Companies without an uploaded logo use a built-in generated SVG logo automatically.
+
+2. Admin Login is now visible on the public home page.
+   - Desktop: top-right Admin Login button.
+   - Mobile: Admin Login button remains visible.
+
+3. Admin dashboard also shows insurer logos in the Insurance Companies list.
+
+4. The project was syntax-checked with Python py_compile.
+
+Default development login:
+Username: admin
+Password: admin123
+
+Change the admin credentials in Render Environment Variables before production.

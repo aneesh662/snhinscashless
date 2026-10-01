@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, session, Response
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
@@ -226,6 +226,23 @@ def delete_insurance(ins_id):
 @app.get("/uploads/logos/<path:filename>")
 def logo_file(filename):
     return send_from_directory(LOGO_DIR, filename)
+
+@app.get("/insurance-logo/<int:ins_id>.svg")
+def generated_insurance_logo(ins_id):
+    """Return a built-in SVG logo when an insurer has no uploaded logo."""
+    insurer = db.get_or_404(InsuranceCompany, ins_id)
+    initials = "".join([part[0] for part in insurer.name.split() if part][:3]).upper() or "INS"
+    safe_initials = initials.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_name = insurer.name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="500" height="220" viewBox="0 0 500 220">
+<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#087bdc"/><stop offset="1" stop-color="#12b9e9"/></linearGradient></defs>
+<rect width="500" height="220" rx="32" fill="#f4faff"/>
+<circle cx="105" cy="110" r="68" fill="url(#g)"/>
+<text x="105" y="125" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="white">{safe_initials}</text>
+<text x="195" y="104" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#062b62">{safe_name[:30]}</text>
+<text x="195" y="138" font-family="Arial,sans-serif" font-size="16" fill="#5d7690">Insurance Partner</text>
+</svg>"""
+    return Response(svg, mimetype="image/svg+xml")
 
 @app.get("/uploads/documents/<path:filename>")
 @admin_required
