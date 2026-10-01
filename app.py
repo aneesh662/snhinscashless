@@ -178,6 +178,58 @@ def update_status(req_id):
         flash(f"Request #{item.id} updated to {status}.", "success")
     return redirect(request.referrer or url_for("admin_dashboard"))
 
+
+@app.route("/admin/insurance/<int:ins_id>/edit", methods=["GET", "POST"])
+@admin_required
+def edit_insurance(ins_id):
+    item = db.get_or_404(InsuranceCompany, ins_id)
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Insurance company name is required.", "danger")
+            return redirect(url_for("edit_insurance", ins_id=ins_id))
+        item.name = name
+        item.tpa_name = request.form.get("tpa_name", "").strip()
+        item.contact = request.form.get("contact", "").strip()
+        item.email = request.form.get("email", "").strip()
+        item.address = request.form.get("address", "").strip()
+        item.description = request.form.get("description", "").strip()
+        new_logo = save_upload(request.files.get("logo"), LOGO_DIR, ALLOWED_IMAGES)
+        if new_logo:
+            if item.logo:
+                try: os.remove(os.path.join(LOGO_DIR, item.logo))
+                except OSError: pass
+            item.logo = new_logo
+        db.session.commit()
+        flash("Insurance company details updated.", "success")
+        return redirect(url_for("admin_dashboard"))
+    return render_template("edit_insurance.html", item=item)
+
+@app.route("/admin/request/<int:req_id>/edit", methods=["GET", "POST"])
+@admin_required
+def edit_request(req_id):
+    item = db.get_or_404(CashlessRequest, req_id)
+    if request.method == "POST":
+        insurance_id = request.form.get("insurance_id", type=int)
+        insurer = db.session.get(InsuranceCompany, insurance_id)
+        patient = request.form.get("patient_name", "").strip()
+        doctor = request.form.get("doctor_name", "").strip()
+        phone = request.form.get("contact_number", "").strip()
+        age = request.form.get("age", type=int)
+        if not insurer or not patient or not doctor or not phone or age is None:
+            flash("Please complete all patient details.", "danger")
+            return redirect(url_for("edit_request", req_id=req_id))
+        item.insurance_id = insurer.id
+        item.patient_name = patient
+        item.age = age
+        item.doctor_name = doctor
+        item.contact_number = phone
+        item.admin_note = request.form.get("admin_note", "").strip()
+        db.session.commit()
+        flash(f"Patient request #{item.id} updated.", "success")
+        return redirect(url_for("admin_dashboard"))
+    return render_template("edit_request.html", item=item, insurers=InsuranceCompany.query.order_by(InsuranceCompany.name.asc()).all())
+
 @app.post("/admin/insurance/add")
 @admin_required
 def add_insurance():
@@ -253,32 +305,65 @@ def document_file(filename):
 def health():
     return {"status": "ok"}
 
+@app.post("/admin/request/<int:req_id>/delete")
+@admin_required
+def admin_delete_request(req_id):
+    item = db.get_or_404(CashlessRequest, req_id)
+    for filename in [item.id_card, item.insurance_card_front, item.insurance_card_back]:
+        if filename:
+            path = os.path.join(DOC_DIR, filename)
+            if os.path.isfile(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+    db.session.delete(item)
+    db.session.commit()
+    flash(f"Cashless request #{req_id} deleted.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.get("/admin/request/<int:req_id>/document/<kind>")
+@admin_required
+def admin_view_document(req_id, kind):
+    item = db.get_or_404(CashlessRequest, req_id)
+    field_map = {
+        "id": item.id_card,
+        "front": item.insurance_card_front,
+        "back": item.insurance_card_back,
+    }
+    filename = field_map.get(kind)
+    if not filename:
+        abort(404)
+    return send_from_directory(DOC_DIR, filename, as_attachment=False)
+
 def seed():
     db.create_all()
     if not Admin.query.first():
-        db.session.add(Admin(username=os.environ.get("ADMIN_USERNAME", "admin"),
-                             password=os.environ.get("ADMIN_PASSWORD", "admin123")))
+        db.session.add(Admin(
+            username=os.environ.get("ADMIN_USERNAME", "admin"),
+            password=os.environ.get("ADMIN_PASSWORD", "admin123")
+        ))
+
+    names = ['TATA AIG Insurance', 'Aditya Birla Health Insurance', 'Vidal Health (Norca Care Plus)', 'SBI General Insurance', 'MD India Health Insurance', 'Medi Assist', 'FHPL', 'HDFC ERGO General Insurance', 'ICICI Lombard General Insurance', 'ManipalCigna Health Insurance', 'ACKO General Insurance', 'Chola MS General Insurance', 'Ericson Insurance TPA', 'Galaxy Health Insurance', 'General Central Insurance', 'IFFCO Tokio General Insurance', 'Link K Insurance TPA', 'Liberty General Insurance', 'Narayana Health Insurance', 'Reliance General Insurance', 'Royal Sundaram General Insurance', 'Universal Sompo General Insurance', 'Volo Health', 'Magma General Insurance', 'Zuno General Insurance']
+    logo_map = {'TATA AIG Insurance': 'tata_aig_insurance.jpg', 'Aditya Birla Health Insurance': 'aditya_birla_health_insurance.jpg', 'Vidal Health (Norca Care Plus)': 'vidal_health_norca_care_plus.jpg', 'SBI General Insurance': 'sbi_general_insurance.jpg', 'MD India Health Insurance': 'md_india_health_insurance.jpg', 'Medi Assist': 'medi_assist.jpg', 'FHPL': 'fhpl.jpg', 'HDFC ERGO General Insurance': 'hdfc_ergo_general_insurance.jpg', 'ICICI Lombard General Insurance': 'icici_lombard_general_insurance.jpg', 'ManipalCigna Health Insurance': 'manipalcigna_health_insurance.jpg', 'ACKO General Insurance': 'acko_general_insurance.jpg', 'Chola MS General Insurance': 'chola_ms_general_insurance.jpg', 'Ericson Insurance TPA': 'ericson_insurance_tpa.jpg', 'Galaxy Health Insurance': 'galaxy_health_insurance.jpg', 'General Central Insurance': 'general_central_insurance.jpg', 'IFFCO Tokio General Insurance': 'iffco_tokio_general_insurance.jpg', 'Link K Insurance TPA': 'link_k_insurance_tpa.jpg', 'Liberty General Insurance': 'liberty_general_insurance.jpg', 'Narayana Health Insurance': 'narayana_health_insurance.jpg', 'Reliance General Insurance': 'reliance_general_insurance.jpg', 'Royal Sundaram General Insurance': 'royal_sundaram_general_insurance.jpg', 'Universal Sompo General Insurance': 'universal_sompo_general_insurance.jpg', 'Volo Health': 'volo_health.jpg', 'Magma General Insurance': 'magma_general_insurance.jpg', 'Zuno General Insurance': 'zuno_general_insurance.jpg'}
+
     if InsuranceCompany.query.count() == 0:
-        names = [
-            "TATA AIG Insurance", "Aditya Birla Health Insurance",
-            "Vidal Health (Norca Care Plus)", "SBI General Insurance",
-            "MD India Health Insurance", "Medi Assist", "FHPL",
-            "HDFC ERGO General Insurance", "ICICI Lombard General Insurance",
-            "ManipalCigna Health Insurance", "ACKO General Insurance",
-            "Chola MS General Insurance", "Ericson Insurance TPA",
-            "Galaxy Health Insurance", "General Central Insurance",
-            "IFFCO Tokio General Insurance", "Link K Insurance TPA",
-            "Liberty General Insurance", "Narayana Health Insurance",
-            "Reliance General Insurance", "Royal Sundaram General Insurance",
-            "Universal Sompo General Insurance", "Volo Health",
-            "Magma General Insurance", "Zuno General Insurance"
-        ]
         for n in names:
-            db.session.add(InsuranceCompany(name=n))
+            db.session.add(InsuranceCompany(
+                name=n,
+                logo=logo_map.get(n, "")
+            ))
+    else:
+        # Add poster logos to existing insurers only when no custom logo exists.
+        for item in InsuranceCompany.query.all():
+            if not item.logo and item.name in logo_map:
+                item.logo = logo_map[item.name]
+
     db.session.commit()
 
 with app.app_context():
     seed()
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
