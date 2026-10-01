@@ -51,6 +51,8 @@ class CashlessRequest(db.Model):
     id_card = db.Column(db.String(255), nullable=False)
     insurance_card_front = db.Column(db.String(255), nullable=False)
     insurance_card_back = db.Column(db.String(255), nullable=False)
+    insurance_document_pdf = db.Column(db.String(255), nullable=True)
+    additional_insurance_pdf = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(30), default="Requested", nullable=False)
     admin_note = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -219,12 +221,38 @@ def edit_request(req_id):
         if not insurer or not patient or not doctor or not phone or age is None:
             flash("Please complete all patient details.", "danger")
             return redirect(url_for("edit_request", req_id=req_id))
+
         item.insurance_id = insurer.id
         item.patient_name = patient
         item.age = age
         item.doctor_name = doctor
         item.contact_number = phone
         item.admin_note = request.form.get("admin_note", "").strip()
+
+        # Replace/remove the saved insurance PDFs.
+        for field, form_name in [("insurance_document_pdf", "insurance_document_pdf"), ("additional_insurance_pdf", "additional_insurance_pdf")]:
+            old_filename = getattr(item, field)
+            if request.form.get(f"remove_{field}") == "1":
+                if old_filename:
+                    old_path = os.path.join(DOC_DIR, old_filename)
+                    if os.path.isfile(old_path):
+                        try: os.remove(old_path)
+                        except OSError: pass
+                setattr(item, field, None)
+            uploaded = request.files.get(form_name)
+            if uploaded and uploaded.filename:
+                new_filename = save_upload(uploaded, DOC_DIR, {"pdf"})
+                if new_filename:
+                    if old_filename and old_filename != new_filename:
+                        old_path = os.path.join(DOC_DIR, old_filename)
+                        if os.path.isfile(old_path):
+                            try: os.remove(old_path)
+                            except OSError: pass
+                    setattr(item, field, new_filename)
+                else:
+                    flash("Only PDF files are allowed for insurance PDF documents.", "danger")
+                    return redirect(url_for("edit_request", req_id=req_id))
+
         db.session.commit()
         flash(f"Patient request #{item.id} updated.", "success")
         return redirect(url_for("admin_dashboard"))
@@ -322,14 +350,12 @@ def admin_delete_request(req_id):
     flash(f"Cashless request #{req_id} deleted.", "success")
     return redirect(url_for("admin_dashboard"))
 
+
 @app.get("/admin/request/<int:req_id>/pdf/<kind>")
 @admin_required
 def admin_view_pdf(req_id, kind):
     item = db.get_or_404(CashlessRequest, req_id)
-    field_map = {
-        "insurance": item.insurance_document_pdf,
-        "additional": item.additional_insurance_pdf,
-    }
+    field_map = {"insurance": item.insurance_document_pdf, "additional": item.additional_insurance_pdf}
     filename = field_map.get(kind)
     if not filename:
         abort(404)

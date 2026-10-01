@@ -1,107 +1,20 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Dashboard — Cashless Insurance</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body>
 <header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-mark">SNH</div><div><h1>Cashless Insurance Admin</h1><p>Santhi Nursing Home</p></div></div><div class="top-actions"><a href="{{url_for('home')}}" class="admin-link">User Page</a><a href="{{url_for('admin_logout')}}" class="admin-link">Logout</a></div></div></header>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="flash {{c}}">{{m}}</div>{% endfor %}{% endwith %}
-<div class="admin-wrap"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><h2>Cashless Request Dashboard</h2><p style="color:#64748b">Track every request from Requested → Received → Processing → Done.</p></div></div>
+<div class="admin-wrap"><div><h2>Cashless Request Dashboard</h2><p style="color:#64748b">Track every request from Requested → Received → Processing → Done.</p></div>
 <div class="stats">{% for s in status_flow %}<div class="stat"><div>{{s}}</div><b>{{stats[s]}}</b></div>{% endfor %}</div>
-<div class="admin-grid"><section class="panel"><h3>➕ Add Insurance Company</h3><form method="post" action="{{url_for('add_insurance')}}" enctype="multipart/form-data" class="stack"><input name="name" placeholder="Insurance company name" required><input name="tpa_name" placeholder="TPA name"><input name="contact" placeholder="Contact number"><input name="email" type="email" placeholder="Email"><textarea name="address" rows="2" placeholder="Address"></textarea><textarea name="description" rows="3" placeholder="Short details / notes"></textarea><label>Logo <input type="file" name="logo" accept="image/*"></label><button class="btn btn-primary">Add Insurance</button></form><hr><h3>Insurance Companies</h3>{% for i in insurers %}<div class="ins-admin-row"><div class="ins-admin-logo">{% if i.logo %}<img src="{{url_for('logo_file',filename=i.logo)}}" alt="{{i.name}} logo">{% else %}<img src="{{url_for('generated_insurance_logo', ins_id=i.id)}}" alt="{{i.name}} logo">{% endif %}</div><div style="flex:1"><span>{{i.name}} {% if not i.active %}<span class="badge">Disabled</span>{% endif %}</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><a class="btn btn-primary" href="{{url_for('edit_insurance',ins_id=i.id)}}">Edit</a><form method="post" action="{{url_for('toggle_insurance',ins_id=i.id)}}" style="display:inline"><button class="btn btn-light">{{'Disable' if i.active else 'Enable'}}</button></form>{% if not i.requests %}<form method="post" action="{{url_for('delete_insurance',ins_id=i.id)}}" style="display:inline"><button class="btn btn-danger">Delete</button></form>{% endif %}</div></div>{% endfor %}</section>
-<section class="panel"><h3>📋 Requests</h3><form style="display:flex;gap:8px;margin-bottom:12px"><input class="search" name="q" value="{{q}}" placeholder="Search patient, phone, insurance"><select name="status"><option value="">All statuses</option>{% for s in status_flow %}<option value="{{s}}" {% if selected_status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select><button class="btn btn-light">Filter</button></form>
-<div class="table-wrap"><table class="table"><thead><tr><th>ID / Date</th><th>Patient</th><th>Insurance</th><th>Doctor / Patient Contact</th><th>Documents</th><th>Status / Update</th></tr></thead><tbody>{% for r in requests_list %}<tr><td><b>#{{r.id}}</b><br>{{r.created_at.strftime('%d-%m-%Y %H:%M')}}<br><small>{{r.status}}</small></td><td><b>{{r.patient_name}}</b><br>Age {{r.age}}<br><strong>☎ {{r.contact_number}}</strong></td><td>{{r.insurance.name}}{% if r.insurance.tpa_name %}<br><small>TPA: {{r.insurance.tpa_name}}</small>{% endif %}</td><td><b>Doctor:</b> {{r.doctor_name}}<br><small>Patient Contact: {{r.contact_number}}</small></td><td>
-<div class="document-links">
-  <a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='id')}}">👁 ID</a>
-  <a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='front')}}">👁 Front</a>
-  <a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='back')}}">👁 Back</a>
-</div>
-<div class="request-actions">
-  <a class="btn btn-primary" href="{{url_for('edit_request',req_id=r.id)}}">✏ Edit</a>
-  <button type="button" class="btn btn-green" onclick="shareRequest({{r.id}})">💬 WhatsApp</button>
-  <form method="post" action="{{url_for('admin_delete_request',req_id=r.id)}}" onsubmit="return confirm('Delete request #{{r.id}} and all uploaded patient documents? This cannot be undone.');" style="display:inline">
-    
-<div class="form-grid">
-  <div class="form-group">
-    <label>Insurance Documents PDF</label>
-    <input type="file" name="insurance_document_pdf" accept="application/pdf">
-    <small>Upload a combined insurance/pre-authorization document as PDF.</small>
-  </div>
-  <div class="form-group">
-    <label>Additional Insurance PDF</label>
-    <input type="file" name="additional_insurance_pdf" accept="application/pdf">
-    <small>Optional additional insurance document.</small>
-  </div>
-</div>
-<button class="btn btn-danger" type="submit">🗑 Delete</button>
-  </form>
-</div>
-</td><td><span class="badge">{{r.status}}</span>
-<form method="post" action="{{url_for('update_status',req_id=r.id)}}" style="margin-top:7px">
-<select name="status">{% for s in status_flow %}<option {% if r.status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select>
-<textarea name="admin_note" placeholder="Admin note" rows="2" style="width:100%;margin-top:5px;border:1px solid #ddd;border-radius:8px">{{r.admin_note}}</textarea>
-<button class="btn btn-green" style="margin-top:5px">Update Status</button>
-</form></td></tr>{% else %}<tr><td colspan="6">No requests found.</td></tr>{% endfor %}</tbody></table></div></section></div></div>
+<div class="admin-grid">
+<section class="panel"><h3>➕ Add Insurance Company</h3><form method="post" action="{{url_for('add_insurance')}}" enctype="multipart/form-data" class="stack"><input name="name" placeholder="Insurance company name" required><input name="tpa_name" placeholder="TPA name"><input name="contact" placeholder="Contact number"><input name="email" type="email" placeholder="Email"><textarea name="address" rows="2" placeholder="Address"></textarea><textarea name="description" rows="3" placeholder="Short details / notes"></textarea><label>Logo <input type="file" name="logo" accept="image/*"></label><button class="btn btn-primary">Add Insurance</button></form><hr><h3>Insurance Companies</h3>{% for i in insurers %}<div class="ins-admin-row"><div class="ins-admin-logo">{% if i.logo %}<img src="{{url_for('logo_file',filename=i.logo)}}" alt="{{i.name}} logo">{% else %}<img src="{{url_for('generated_insurance_logo',ins_id=i.id)}}" alt="{{i.name}} logo">{% endif %}</div><div style="flex:1"><span>{{i.name}} {% if not i.active %}<span class="badge">Disabled</span>{% endif %}</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><a class="btn btn-primary" href="{{url_for('edit_insurance',ins_id=i.id)}}">Edit</a><form method="post" action="{{url_for('toggle_insurance',ins_id=i.id)}}" style="display:inline"><button class="btn btn-light">{{'Disable' if i.active else 'Enable'}}</button></form>{% if not i.requests %}<form method="post" action="{{url_for('delete_insurance',ins_id=i.id)}}" style="display:inline" onsubmit="return confirm('Delete this insurance company?')"><button class="btn btn-danger">Delete</button></form>{% endif %}</div></div>{% endfor %}</section>
+<section class="panel"><h3>📋 Requests</h3><form style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><input class="search" name="q" value="{{q}}" placeholder="Search patient, phone, insurance"><select name="status"><option value="">All statuses</option>{% for s in status_flow %}<option value="{{s}}" {% if selected_status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select><button class="btn btn-light">Filter</button></form>
+<div class="table-wrap"><table class="table"><thead><tr><th>ID / Date</th><th>Patient</th><th>Insurance</th><th>Doctor / Contact</th><th>Documents</th><th>Status / Update</th></tr></thead><tbody>
+{% for r in requests_list %}<tr><td><b>#{{r.id}}</b><br>{{r.created_at.strftime('%d-%m-%Y %H:%M')}}<br><small>{{r.status}}</small></td><td><b>{{r.patient_name}}</b><br>Age {{r.age}}<br><strong>☎ {{r.contact_number}}</strong></td><td>{{r.insurance.name}}{% if r.insurance.tpa_name %}<br><small>TPA: {{r.insurance.tpa_name}}</small>{% endif %}</td><td><b>Doctor:</b> {{r.doctor_name}}<br><small>Patient Contact: {{r.contact_number}}</small></td>
+<td><div class="document-links"><a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='id')}}">👁 ID</a><a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='front')}}">👁 Front</a><a class="btn btn-light" target="_blank" href="{{url_for('admin_view_document',req_id=r.id,kind='back')}}">👁 Back</a>{% if r.insurance_document_pdf %}<a class="btn btn-light" target="_blank" href="{{url_for('admin_view_pdf',req_id=r.id,kind='insurance')}}">📄 Insurance PDF</a>{% endif %}{% if r.additional_insurance_pdf %}<a class="btn btn-light" target="_blank" href="{{url_for('admin_view_pdf',req_id=r.id,kind='additional')}}">📄 Additional PDF</a>{% endif %}</div><div class="request-actions"><a class="btn btn-primary" href="{{url_for('edit_request',req_id=r.id)}}">✏ Edit</a><button type="button" class="btn btn-green" onclick="shareRequest({{r.id}})">💬 WhatsApp</button><form method="post" action="{{url_for('admin_delete_request',req_id=r.id)}}" onsubmit="return confirm('Delete request #{{r.id}} and all uploaded patient documents? This cannot be undone.');" style="display:inline"><button class="btn btn-danger" type="submit">🗑 Delete</button></form></div></td>
+<td><span class="badge">{{r.status}}</span><form method="post" action="{{url_for('update_status',req_id=r.id)}}" style="margin-top:7px"><select name="status">{% for s in status_flow %}<option {% if r.status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select><textarea name="admin_note" placeholder="Admin note" rows="2" style="width:100%;margin-top:5px;border:1px solid #ddd;border-radius:8px">{{r.admin_note}}</textarea><button class="btn btn-green" style="margin-top:5px">Update Status</button></form></td></tr>{% else %}<tr><td colspan="6">No requests found.</td></tr>{% endfor %}</tbody></table></div></section></div></div>
 <script>
-async function shareRequest(id) {
-  const base = `${window.location.origin}`;
-  const filesInfo = [
-    {url: `/admin/request/${id}/document/id`, name: `request_${id}_ID`},
-    {url: `/admin/request/${id}/document/front`, name: `request_${id}_Insurance_Front`},
-    {url: `/admin/request/${id}/document/back`, name: `request_${id}_Insurance_Back`}
-  ];
-
-  // Read patient information from the row currently being shared.
-  const row = [...document.querySelectorAll('.table tbody tr')].find(
-    tr => tr.innerText.includes(`#${id}`)
-  );
-  if (!row) return;
-
-  const cells = row.querySelectorAll('td');
-  const patientText = cells[1]?.innerText.trim() || '';
-  const insuranceText = cells[2]?.innerText.trim() || '';
-  const doctorText = cells[3]?.innerText.trim() || '';
-  const statusText = cells[5]?.querySelector('.badge')?.innerText || '';
-
-  const message =
-`*Santhi Nursing Home - Cashless Insurance Request #${id}*
-
-*Patient*
-${patientText}
-
-*Insurance*
-${insuranceText}
-
-*Doctor / Contact*
-${doctorText}
-
-*Status:* ${statusText}
-
-ID Card, Insurance Card Front and Insurance Card Back are attached.`;
-
-  try {
-    const files = [];
-    for (const info of filesInfo) {
-      const response = await fetch(info.url, {credentials: 'same-origin'});
-      if (!response.ok) throw new Error('Document could not be loaded');
-      const blob = await response.blob();
-      const ext = blob.type.includes('pdf') ? '.pdf' : '.jpg';
-      files.push(new File([blob], info.name + ext, {type: blob.type || 'image/jpeg'}));
-    }
-
-    if (navigator.share && navigator.canShare && navigator.canShare({files})) {
-      await navigator.share({
-        title: `Cashless Insurance Request #${id}`,
-        text: message,
-        files: files
-      });
-      return;
-    }
-
-    // Desktop/unsupported-browser fallback: open WhatsApp with full details.
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(message + "\n\nPlease attach the ID and insurance card images manually.")}`;
-    window.open(waUrl, '_blank', 'noopener');
-  } catch (error) {
-    if (error.name === 'AbortError') return;
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(message + "\n\nPlease attach the ID and insurance card images manually.")}`;
-    window.open(waUrl, '_blank', 'noopener');
-  }
-}
-</script>
-
-</body></html>
+async function shareRequest(id){
+ const filesInfo=[{url:`/admin/request/${id}/document/id`,name:`request_${id}_ID`},{url:`/admin/request/${id}/document/front`,name:`request_${id}_Insurance_Front`},{url:`/admin/request/${id}/document/back`,name:`request_${id}_Insurance_Back`}];
+ {% for r in requests_list %}{% if r.insurance_document_pdf %}if(id==={{r.id}})filesInfo.push({url:`/admin/request/${id}/pdf/insurance`,name:`request_${id}_Insurance_Document.pdf`});{% endif %}{% if r.additional_insurance_pdf %}if(id==={{r.id}})filesInfo.push({url:`/admin/request/${id}/pdf/additional`,name:`request_${id}_Additional_Insurance.pdf`});{% endif %}{% endfor %}
+ const row=[...document.querySelectorAll('.table tbody tr')].find(tr=>tr.innerText.includes(`#${id}`)); if(!row)return; const cells=row.querySelectorAll('td');
+ const message=`*Santhi Nursing Home - Cashless Insurance Request #${id}*\n\n*Patient*\n${cells[1]?.innerText.trim()||''}\n\n*Insurance*\n${cells[2]?.innerText.trim()||''}\n\n*Doctor / Contact*\n${cells[3]?.innerText.trim()||''}\n\n*Status:* ${cells[5]?.querySelector('.badge')?.innerText||''}`;
+ try{const files=[];for(const info of filesInfo){const res=await fetch(info.url,{credentials:'same-origin'});if(!res.ok)throw Error('Document load failed');const blob=await res.blob();const ext=blob.type.includes('pdf')?'.pdf':'.jpg';files.push(new File([blob],info.name.endsWith('.pdf')?info.name:info.name+ext,{type:blob.type||'image/jpeg'}));}if(navigator.share&&navigator.canShare&&navigator.canShare({files})){await navigator.share({title:`Cashless Insurance Request #${id}`,text:message,files});return;}window.open('https://wa.me/?text='+encodeURIComponent(message+'\n\nPlease attach the documents manually.'),'_blank','noopener');}catch(e){if(e.name==='AbortError')return;window.open('https://wa.me/?text='+encodeURIComponent(message+'\n\nPlease attach the documents manually.'),'_blank','noopener');}}
+</script></body></html>
