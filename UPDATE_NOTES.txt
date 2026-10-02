@@ -1,14 +1,1 @@
-LATEST UPDATE
-
-1. Insurance company list now uses the actual logo images cropped from the supplied Santhi Nursing Home insurance poster.
-2. The same logos are shown in the Admin > Insurance Companies list.
-3. Admin request actions:
-   - View ID
-   - View Insurance Front
-   - View Insurance Back
-   - Edit patient/request
-   - Delete request with confirmation
-   - Share to WhatsApp
-4. WhatsApp sharing attempts to include patient details plus the ID and insurance-card files through the device's native Web Share API.
-5. On browsers that cannot share files, WhatsApp opens with the full patient/request text and instructs the admin to attach the images manually.
-6. Patient documents remain protected by the admin session.
+Responsive mobile/tablet/laptop/desktop UI added. Admin new-request alarm polls every 8 seconds, with sound, visual alert, optional browser notification, Enable Alarm and Test Sound controls. Mobile browsers require one user tap to enable audio.

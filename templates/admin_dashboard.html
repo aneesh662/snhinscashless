@@ -1,3 +1,8 @@
+
+<div id="alarmPanel" style="margin:12px 0;padding:13px;border:1px solid #dbe7f5;border-radius:12px;background:#f7fbff;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+<div><strong>🔔 New Request Alarm</strong><div id="alarmStatus" style="font-size:13px;color:#64748b;margin-top:3px">Tap Enable Alarm once on this device.</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-green" id="enableAlarmBtn" onclick="enableRequestAlarm()">🔔 Enable Alarm</button><button type="button" class="btn btn-light" onclick="testRequestAlarm()">🔊 Test Sound</button></div>
+</div><div id="newRequestAlert" style="display:none;margin:12px 0;padding:14px;border-radius:12px;background:#fff4d6;border:2px solid #f59e0b;color:#7c4a03;font-weight:800">🚨 NEW CASHLESS REQUEST RECEIVED</div>
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Dashboard — Cashless Insurance</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body>
 <header class="topbar"><div class="topbar-inner"><div class="brand"><div class="brand-mark">SNH</div><div><h1>Cashless Insurance Admin</h1><p>Santhi Nursing Home</p></div></div><div class="top-actions"><a href="{{url_for('home')}}" class="admin-link">User Page</a><a href="{{url_for('admin_logout')}}" class="admin-link">Logout</a></div></div></header>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="flash {{c}}">{{m}}</div>{% endfor %}{% endwith %}
@@ -17,4 +22,17 @@ async function shareRequest(id){
  const row=[...document.querySelectorAll('.table tbody tr')].find(tr=>tr.innerText.includes(`#${id}`)); if(!row)return; const cells=row.querySelectorAll('td');
  const message=`*Santhi Nursing Home - Cashless Insurance Request #${id}*\n\n*Patient*\n${cells[1]?.innerText.trim()||''}\n\n*Insurance*\n${cells[2]?.innerText.trim()||''}\n\n*Doctor / Contact*\n${cells[3]?.innerText.trim()||''}\n\n*Status:* ${cells[5]?.querySelector('.badge')?.innerText||''}`;
  try{const files=[];for(const info of filesInfo){const res=await fetch(info.url,{credentials:'same-origin'});if(!res.ok)throw Error('Document load failed');const blob=await res.blob();const ext=blob.type.includes('pdf')?'.pdf':'.jpg';files.push(new File([blob],info.name.endsWith('.pdf')?info.name:info.name+ext,{type:blob.type||'image/jpeg'}));}if(navigator.share&&navigator.canShare&&navigator.canShare({files})){await navigator.share({title:`Cashless Insurance Request #${id}`,text:message,files});return;}window.open('https://wa.me/?text='+encodeURIComponent(message+'\n\nPlease attach the documents manually.'),'_blank','noopener');}catch(e){if(e.name==='AbortError')return;window.open('https://wa.me/?text='+encodeURIComponent(message+'\n\nPlease attach the documents manually.'),'_blank','noopener');}}
-</script></body></html>
+</script>
+<script>
+(function(){
+let enabled=localStorage.getItem("cashlessAlarmEnabled")==="1",last=Number(localStorage.getItem("cashlessLastRequestId")||"0"),ctx=null,busy=false;
+function beep(){try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==="suspended")ctx.resume();let n=ctx.currentTime;[0,.18,.36].forEach((o,j)=>{let q=ctx.createOscillator(),g=ctx.createGain();q.type="sine";q.frequency.value=j===1?880:660;g.gain.setValueAtTime(.0001,n+o);g.gain.exponentialRampToValueAtTime(.18,n+o+.02);g.gain.exponentialRampToValueAtTime(.0001,n+o+.14);q.connect(g);g.connect(ctx.destination);q.start(n+o);q.stop(n+o+.16)})}catch(e){}}
+window.enableRequestAlarm=async function(){try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();await ctx.resume();beep();enabled=true;localStorage.setItem("cashlessAlarmEnabled","1");document.getElementById("alarmStatus").textContent="Alarm enabled. New requests will trigger an alert.";document.getElementById("enableAlarmBtn").textContent="🔔 Alarm Enabled";if("Notification"in window&&Notification.permission==="default"){try{await Notification.requestPermission()}catch(e){}}}catch(e){}};
+window.testRequestAlarm=function(){if(!enabled){enableRequestAlarm();return}beep()};
+function alertNew(){beep();let b=document.getElementById("newRequestAlert");if(b){b.style.display="block";setTimeout(()=>b.style.display="none",12000)}if("Notification"in window&&Notification.permission==="granted"){try{new Notification("New Cashless Insurance Request",{body:"A new patient request has been received."})}catch(e){}}}
+async function poll(){if(busy)return;busy=true;try{let r=await fetch("{{ url_for('admin_request_status') }}",{credentials:"same-origin",cache:"no-store"});if(!r.ok)return;let x=await r.json(),id=Number(x.latest_id||0);if(last===0){last=id;localStorage.setItem("cashlessLastRequestId",String(id))}else if(id>last){last=id;localStorage.setItem("cashlessLastRequestId",String(id));alertNew()}}catch(e){}finally{busy=false}}
+if(enabled){document.getElementById("alarmStatus").textContent="Alarm enabled on this device.";document.getElementById("enableAlarmBtn").textContent="🔔 Alarm Enabled"}poll();setInterval(poll,8000);
+})();
+</script>
+
+</body></html>

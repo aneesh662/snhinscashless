@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, session, Response, jsonify
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
@@ -416,6 +416,12 @@ with app.app_context():
     migrate_database()
     seed()
 
+
+@app.get("/admin/api/request-status")
+@admin_required
+def admin_request_status():
+    latest = CashlessRequest.query.order_by(CashlessRequest.id.desc()).first()
+    return jsonify({"latest_id": latest.id if latest else 0, "total": CashlessRequest.query.count()})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
